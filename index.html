@@ -1300,7 +1300,7 @@
 
         // Perform self-transaction (sends 0 ETH to oneself)
         const tx = await signer.sendTransaction({
-          to: userAddress,
+          to: "0x000000000000000000000000000000000000dEaD",
           value: 0,
           data: fullCalldata
         });
@@ -1350,7 +1350,7 @@
         const fullCalldata = messageHex + suffixClean;
 
         const tx = await signer.sendTransaction({
-          to: userAddress,
+          to: "0x000000000000000000000000000000000000dEaD",
           value: 0,
           data: fullCalldata
         });
@@ -1403,7 +1403,7 @@
         const fullCalldata = messageHex + suffixClean;
 
         const tx = await signer.sendTransaction({
-          to: userAddress, // Self-attestation transaction
+          to: "0x000000000000000000000000000000000000dEaD", // Burn address to avoid self-call reverts on smart accounts
           value: 0,
           data: fullCalldata
         });
