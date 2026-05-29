@@ -1017,14 +1017,8 @@
     const BASE_RPC_URL = 'https://mainnet.base.org';
     
     // BUILDER CODES REQUIREMENT (AS SPECIFIED BY THE USER)
-    const BUILDER_CODE = "bc_sjkexp2o";
-    const BUILDER_STRING_RAW = "0x62635f736a6b6578703260f0b00802180218021802180218021802180218021v";
-    
-    // Sanitize the raw builder string to be valid hex. Ethers requires characters A-F, a-f, 0-9.
-    // We replace the trailing invalid character 'v' with '8' to preserve exact length and fit the ERC-8021 suffix formatting.
-    const BUILDER_STRING = BUILDER_STRING_RAW.endsWith('v') 
-      ? BUILDER_STRING_RAW.substring(0, BUILDER_STRING_RAW.length - 1) + '8' 
-      : BUILDER_STRING_RAW;
+    const BUILDER_CODE = "bc_oxi5olta";
+    const BUILDER_STRING = "0x62635f6f7869356f6c74610b0080218021802180218021802180218021";
 
     let provider = null;
     let signer = null;
