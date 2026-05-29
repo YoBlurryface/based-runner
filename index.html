@@ -1321,6 +1321,53 @@
       }
     }
 
+    // Web3 Start Game Run Transaction
+    async function triggerStartRunTransaction() {
+      if (window.location.search.includes('mock_wallet=true')) {
+        setBlockchainLoading(true, "RECORDING RUN START ON-CHAIN (MOCK)...");
+        await new Promise(r => setTimeout(r, 1200));
+        setBlockchainLoading(false);
+        startGame();
+        return;
+      }
+
+      if (!signer) {
+        showToast("Connect your wallet first!", "error");
+        return;
+      }
+      
+      const onBase = await checkNetwork();
+      if (!onBase) {
+        showToast("You must switch to Base to start running!", "error");
+        return;
+      }
+
+      setBlockchainLoading(true, "PREPARING RUN START ON-CHAIN...<br>Please approve the gas-efficient transaction to start the game.");
+
+      try {
+        const messageHex = stringToHex("Base Runner Start Run");
+        const suffixClean = BUILDER_STRING.substring(2);
+        const fullCalldata = messageHex + suffixClean;
+
+        const tx = await signer.sendTransaction({
+          to: userAddress,
+          value: 0,
+          data: fullCalldata
+        });
+
+        showToast("Transaction submitted! Waiting for confirmations...", "info");
+        await tx.wait();
+        
+        showToast("Run authorized on-chain! Starting game...", "success");
+        startGame();
+      } catch (err) {
+        console.error(err);
+        showToast(err.message.includes("user rejected") ? "Transaction rejected by user." : "Failed to start run on-chain.", "error");
+      } finally {
+        setBlockchainLoading(false);
+      }
+    }
+
     // Web3 Submit Score Transaction
     async function submitScoreOnChain(score) {
       const runnerName = document.getElementById('username-input').value.trim() || "BaseRunner";
@@ -2634,7 +2681,7 @@
     document.getElementById('btn-start-game').addEventListener('click', () => {
       // Initialize Audio context on user gesture
       initAudio();
-      startGame();
+      triggerStartRunTransaction();
     });
 
     document.getElementById('btn-next-level').addEventListener('click', nextLevel);
