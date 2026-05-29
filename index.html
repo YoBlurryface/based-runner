@@ -862,9 +862,7 @@
         <div class="hud-stat hud-stat-blue" id="hud-score">
           <span>SCORE:</span> <span id="score-val">0000</span>
         </div>
-        <div class="hud-stat" id="hud-level" style="border-color:#FFFFFF; color:#FFFFFF;">
-          <span>LVL:</span> <span id="level-val">1/10</span>
-        </div>
+
       </div>
 
       <!-- MOBILE CONTROLS -->
@@ -2319,7 +2317,8 @@
       document.getElementById('lives-val').innerText = gameState.lives;
       document.getElementById('coins-val').innerText = String(gameState.coins).padStart(2, '0');
       document.getElementById('score-val').innerText = String(gameState.totalScore).padStart(4, '0');
-      document.getElementById('level-val').innerText = `${gameState.level}/10`;
+      const lvlValEl = document.getElementById('level-val');
+      if (lvlValEl) lvlValEl.innerText = `${gameState.level}/10`;
     }
 
     // Main Game Engine Loop
