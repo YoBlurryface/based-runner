@@ -1,0 +1,14 @@
+{
+  "name": "based-runner",
+  "version": "1.0.0",
+  "description": "Base Runner - A 2D side-scrolling platformer with Base L2 blockchain integration",
+  "main": "index.html",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "vite": "^5.2.0"
+  }
+}

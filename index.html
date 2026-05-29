@@ -1,0 +1,2666 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Base Runner - Blockchain Platformer</title>
+  <!-- Fonts (via jsDelivr CDN to bypass Brave Shields/privacy blocks on Google Domains) -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/inter@5.0.15/index.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/press-start-2p@5.0.12/index.min.css">
+  <!-- Ethers.js loaded dynamically via ESM import in main script -->
+  
+  <style>
+    /* RESET & BASE STYLES */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    body, html {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background-color: #050A1A;
+      font-family: 'Inter', sans-serif;
+      color: #FFFFFF;
+    }
+
+    /* TYPOGRAPHY */
+    h1, h2, h3, .pixel-font {
+      font-family: 'Press Start 2P', monospace;
+      text-transform: uppercase;
+    }
+
+    /* SCROLLBARS */
+    ::-webkit-scrollbar {
+      width: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #050A1A;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #0052FF;
+      border-radius: 3px;
+    }
+
+    /* CONSTANTS & VALUES */
+    :root {
+      --base-blue: #0052FF;
+      --base-blue-hover: #1A66FF;
+      --base-blue-glow: rgba(0, 82, 255, 0.5);
+      --electric-cyan: #00F0FF;
+      --electric-cyan-glow: rgba(0, 240, 255, 0.4);
+      --gold: #FFD700;
+      --gold-glow: rgba(255, 215, 0, 0.4);
+      --danger: #FF0055;
+      --danger-glow: rgba(255, 0, 85, 0.4);
+      --bg-dark: #050A1A;
+      --bg-card: rgba(10, 20, 50, 0.6);
+      --border-color: rgba(0, 82, 255, 0.3);
+    }
+
+    /* BACKGROUND ANIMATION */
+    .bg-grid {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 0;
+      background-image: 
+        linear-gradient(rgba(0, 82, 255, 0.05) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0, 82, 255, 0.05) 1px, transparent 1px);
+      background-size: 50px 50px;
+      animation: gridScroll 10s linear infinite;
+    }
+
+    @keyframes gridScroll {
+      0% {
+        background-position: 0 0;
+      }
+      100% {
+        background-position: 0 100px;
+      }
+    }
+
+    /* SCREEN FLOW SYSTEM */
+    .screen {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 10;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.5s ease;
+      padding: 20px;
+    }
+
+    .screen.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    /* GLASSMORPHISM CARD */
+    .glass-card {
+      background: var(--bg-card);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      padding: 30px;
+      width: 100%;
+      max-width: 480px;
+      box-shadow: 0 8px 32px 0 rgba(0, 82, 255, 0.15);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .glass-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -50%;
+      width: 200%;
+      height: 100%;
+      background: linear-gradient(
+        to right,
+        transparent,
+        rgba(255, 255, 255, 0.03),
+        transparent
+      );
+      transform: rotate(30deg);
+      animation: shine 8s infinite linear;
+      pointer-events: none;
+    }
+
+    @keyframes shine {
+      0% { transform: translate(-30%, -30%) rotate(30deg); }
+      100% { transform: translate(30%, 30%) rotate(30deg); }
+    }
+
+    /* BUTTONS */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 14px 28px;
+      font-size: 14px;
+      font-weight: 600;
+      border-radius: 12px;
+      border: none;
+      cursor: pointer;
+      transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+      width: 100%;
+      margin-bottom: 12px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      text-decoration: none;
+      gap: 10px;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--base-blue), #003db3);
+      color: white;
+      box-shadow: 0 4px 15px var(--base-blue-glow);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(0, 82, 255, 0.7);
+      background: linear-gradient(135deg, var(--base-blue-hover), var(--base-blue));
+    }
+
+    .btn-secondary {
+      background: rgba(0, 82, 255, 0.1);
+      color: var(--electric-cyan);
+      border: 1px solid var(--border-color);
+      box-shadow: 0 4px 10px rgba(0, 240, 255, 0.05);
+    }
+
+    .btn-secondary:hover:not(:disabled) {
+      background: rgba(0, 82, 255, 0.2);
+      border-color: var(--electric-cyan);
+      box-shadow: 0 4px 15px var(--electric-cyan-glow);
+      transform: translateY(-2px);
+    }
+
+    .btn-danger {
+      background: linear-gradient(135deg, var(--danger), #b3003b);
+      color: white;
+      box-shadow: 0 4px 15px var(--danger-glow);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .btn-danger:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(255, 0, 85, 0.7);
+    }
+
+    .btn:active:not(:disabled) {
+      transform: translateY(1px);
+    }
+
+    .btn:disabled {
+      background: rgba(255, 255, 255, 0.05) !important;
+      color: rgba(255, 255, 255, 0.3) !important;
+      border: 1px solid rgba(255, 255, 255, 0.05) !important;
+      box-shadow: none !important;
+      cursor: not-allowed;
+      transform: none !important;
+    }
+
+    /* FORM CONTROL */
+    .input-group {
+      margin-bottom: 20px;
+      width: 100%;
+      text-align: left;
+    }
+
+    .input-label {
+      font-size: 10px;
+      font-family: 'Press Start 2P', monospace;
+      color: var(--electric-cyan);
+      margin-bottom: 8px;
+      display: block;
+      letter-spacing: 0.5px;
+    }
+
+    .text-input {
+      width: 100%;
+      background: rgba(5, 10, 26, 0.8);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 14px 18px;
+      color: white;
+      font-size: 14px;
+      outline: none;
+      transition: all 0.3s ease;
+    }
+
+    .text-input:focus {
+      border-color: var(--electric-cyan);
+      box-shadow: 0 0 10px var(--electric-cyan-glow);
+    }
+
+    /* ONBOARDING / TITLE SCREEN SPECIFICS */
+    .logo-container {
+      text-align: center;
+      margin-bottom: 40px;
+      animation: logoPulse 3s ease-in-out infinite alternate;
+      z-index: 5;
+    }
+
+    .logo-title {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 26px; /* Adjusted size for retro font scaling */
+      color: #FFFFFF;
+      text-shadow: 
+        0 0 5px var(--base-blue),
+        0 0 15px var(--base-blue),
+        0 0 30px var(--base-blue);
+      letter-spacing: 2px;
+      margin-bottom: 10px;
+    }
+
+    .logo-subtitle {
+      font-size: 10px;
+      color: var(--electric-cyan);
+      letter-spacing: 4px;
+      text-shadow: 0 0 5px var(--electric-cyan-glow);
+    }
+
+    @keyframes logoPulse {
+      0% {
+        transform: translateY(0) scale(1);
+      }
+      100% {
+        transform: translateY(-8px) scale(1.02);
+      }
+    }
+
+    /* WALLET CONNECT PANEL */
+    .wallet-status {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: rgba(0, 82, 255, 0.15);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 12px 16px;
+      margin-bottom: 20px;
+      font-size: 13px;
+    }
+
+    .wallet-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--danger);
+      box-shadow: 0 0 8px var(--danger-glow);
+    }
+
+    .wallet-dot.connected {
+      background: #00FF88;
+      box-shadow: 0 0 8px rgba(0, 255, 136, 0.6);
+    }
+
+    .wallet-address {
+      font-family: monospace;
+      font-size: 13px;
+      color: var(--electric-cyan);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    /* ALERT/WARNING BOX */
+    .warning-box {
+      background: rgba(255, 0, 85, 0.15);
+      border: 1px solid var(--danger);
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 20px;
+      font-size: 12px;
+      line-height: 1.5;
+      color: #FFCCD9;
+      display: none;
+    }
+
+    /* HUD SCREEN */
+    #hud-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 5;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 20px;
+    }
+
+    .hud-top {
+      display: flex;
+      justify-content: space-between;
+      width: 100%;
+      padding-right: 55px; /* Clear space for sound-toggle button in top-right */
+    }
+
+    .hud-stat {
+      background: rgba(5, 10, 26, 0.75);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 8px 14px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-family: 'Press Start 2P', monospace;
+      font-size: 10px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+      backdrop-filter: blur(5px);
+    }
+
+    .hud-stat-blue {
+      border-color: var(--electric-cyan);
+      color: var(--electric-cyan);
+    }
+
+    .hud-stat-gold {
+      border-color: var(--gold);
+      color: var(--gold);
+    }
+
+    .hud-stat-danger {
+      border-color: var(--danger);
+      color: var(--danger);
+    }
+
+    /* GAME CANVAS CONTAINER */
+    #game-container {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      background: #050a1a;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    #game-canvas {
+      display: block;
+      background: #050a1a;
+      box-shadow: 0 0 30px rgba(0, 82, 255, 0.2);
+    }
+
+    /* CONTROLS OVERLAY FOR MOBILE */
+    #mobile-controls {
+      position: absolute;
+      bottom: 20px;
+      left: 20px;
+      right: 20px;
+      display: none;
+      justify-content: space-between;
+      align-items: flex-end;
+      z-index: 10;
+      pointer-events: auto;
+    }
+
+    .dpad {
+      display: flex;
+      gap: 12px;
+    }
+
+    .control-btn {
+      width: 65px;
+      height: 65px;
+      border-radius: 50%;
+      background: rgba(0, 82, 255, 0.2);
+      border: 2px solid var(--base-blue);
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      font-weight: bold;
+      touch-action: none;
+      box-shadow: 0 4px 10px var(--base-blue-glow);
+      transition: background 0.1s, transform 0.1s;
+    }
+
+    .control-btn:active {
+      background: rgba(0, 82, 255, 0.6);
+      transform: scale(0.92);
+      box-shadow: 0 0 15px var(--electric-cyan);
+      border-color: var(--electric-cyan);
+    }
+
+    .jump-btn-container {
+      display: flex;
+      gap: 15px;
+    }
+
+    .action-btn {
+      width: 75px;
+      height: 75px;
+      border-radius: 50%;
+      background: rgba(0, 240, 255, 0.2);
+      border: 2px solid var(--electric-cyan);
+      box-shadow: 0 4px 10px var(--electric-cyan-glow);
+      font-family: 'Press Start 2P', monospace;
+      font-size: 11px;
+    }
+
+    .action-btn:active {
+      background: rgba(0, 240, 255, 0.6);
+    }
+
+    /* LEADERBOARD VIEW */
+    .leaderboard-container {
+      margin-top: 15px;
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      background: rgba(5, 10, 26, 0.6);
+      max-height: 150px;
+      overflow-y: auto;
+      padding: 10px;
+    }
+
+    .leaderboard-header {
+      display: flex;
+      justify-content: space-between;
+      font-size: 8px;
+      font-family: 'Press Start 2P', monospace;
+      color: var(--electric-cyan);
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 6px;
+      margin-bottom: 8px;
+    }
+
+    .leaderboard-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 11px;
+      padding: 4px 0;
+      color: #E2E8F0;
+    }
+
+    .leaderboard-row:nth-child(even) {
+      background: rgba(0, 82, 255, 0.05);
+    }
+
+    .leaderboard-name {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      max-width: 120px;
+    }
+
+    .leaderboard-score {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 9px;
+      color: var(--gold);
+    }
+
+    /* TOAST NOTIFICATION STYLES */
+    #toast-container {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      z-index: 100;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      max-width: 320px;
+      pointer-events: none;
+    }
+
+    .toast {
+      background: rgba(10, 20, 50, 0.95);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 12px 18px;
+      color: white;
+      font-size: 13px;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      transform: translateX(120%);
+      transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      backdrop-filter: blur(10px);
+      pointer-events: auto;
+    }
+
+    .toast.show {
+      transform: translateX(0);
+    }
+
+    .toast.success {
+      border-left: 4px solid #00FF88;
+    }
+
+    .toast.error {
+      border-left: 4px solid var(--danger);
+    }
+
+    .toast.info {
+      border-left: 4px solid var(--electric-cyan);
+    }
+
+    .toast-icon {
+      font-size: 18px;
+      flex-shrink: 0;
+    }
+
+    /* SPINNER FOR BLOCKCHAIN LOADING STAGE */
+    .spinner-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(5, 10, 26, 0.85);
+      backdrop-filter: blur(4px);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 15;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s ease;
+    }
+
+    .spinner-overlay.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .spinner {
+      width: 50px;
+      height: 50px;
+      border: 3px solid rgba(0, 82, 255, 0.2);
+      border-top-color: var(--electric-cyan);
+      border-radius: 50%;
+      animation: spin 1s infinite linear;
+      margin-bottom: 20px;
+      box-shadow: 0 0 15px var(--electric-cyan-glow);
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .spinner-text {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 10px;
+      color: var(--electric-cyan);
+      letter-spacing: 1px;
+      text-align: center;
+      line-height: 1.8;
+    }
+
+    /* SOUND SWITCH */
+    .sound-toggle {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      z-index: 20;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: rgba(5, 10, 26, 0.75);
+      border: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      color: var(--electric-cyan);
+      transition: all 0.3s;
+    }
+
+    .sound-toggle:hover {
+      background: rgba(0, 82, 255, 0.2);
+      border-color: var(--electric-cyan);
+      transform: scale(1.08);
+    }
+
+    /* OTHER UI DETAILS */
+    .score-summary {
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 12px;
+      padding: 16px;
+      margin: 20px 0;
+      width: 100%;
+      text-align: center;
+      border: 1px dashed var(--border-color);
+    }
+
+    .score-row {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 10px;
+      font-size: 14px;
+    }
+
+    .score-row:last-child {
+      margin-bottom: 0;
+      font-weight: bold;
+      color: var(--gold);
+    }
+
+    /* GLITCH EFFECT (FOR GAME OVER SCREEN) */
+    .glitch-title {
+      position: relative;
+      color: var(--danger);
+      animation: glitch 1.5s infinite;
+    }
+
+    .glitch-title::before,
+    .glitch-title::after {
+      content: attr(data-text);
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: transparent;
+    }
+
+    .glitch-title::before {
+      left: 2px;
+      text-shadow: -2px 0 var(--electric-cyan);
+      clip: rect(44px, 450px, 56px, 0);
+      animation: glitch-anim 5s infinite linear alternate-reverse;
+    }
+
+    .glitch-title::after {
+      left: -2px;
+      text-shadow: -2px 0 var(--gold);
+      clip: rect(85px, 450px, 140px, 0);
+      animation: glitch-anim2 5s infinite linear alternate-reverse;
+    }
+
+    @keyframes glitch {
+      0% { text-shadow: 2px -2px rgba(255,0,0,0.3), -2px 2px rgba(0,255,255,0.3); }
+      50% { text-shadow: -2px -2px rgba(255,0,0,0.3), 2px 2px rgba(0,255,255,0.3); }
+      100% { text-shadow: 2px 2px rgba(255,0,0,0.3), -2px -2px rgba(0,255,255,0.3); }
+    }
+
+    @keyframes glitch-anim {
+      0% { clip: rect(15px, 9999px, 66px, 0); }
+      100% { clip: rect(34px, 9999px, 55px, 0); }
+    }
+
+    @keyframes glitch-anim2 {
+      0% { clip: rect(70px, 9999px, 105px, 0); }
+      100% { clip: rect(12px, 9999px, 85px, 0); }
+    }
+
+    /* INSTRUCTION SECTION */
+    .instructions {
+      font-size: 11px;
+      color: #A0AEC0;
+      line-height: 1.6;
+      margin-top: 15px;
+      text-align: center;
+      border-top: 1px solid rgba(255,255,255,0.05);
+      padding-top: 15px;
+    }
+
+    .credit-link {
+      display: inline-block;
+      width: 100%;
+      text-align: center;
+      margin-top: 22px;
+      font-size: 7px;
+      font-family: 'Press Start 2P', monospace;
+      color: rgba(255, 255, 255, 0.4);
+      text-decoration: none;
+      transition: all 0.3s ease;
+      letter-spacing: 0.5px;
+      z-index: 5;
+    }
+
+    .credit-link:hover {
+      color: var(--electric-cyan) !important;
+      text-shadow: 0 0 8px var(--electric-cyan-glow);
+    }
+
+    /* RESPONSIVE HANDLING */
+    @media (max-width: 768px) {
+      .logo-title {
+        font-size: 24px;
+      }
+      .glass-card {
+        padding: 20px;
+      }
+      #mobile-controls {
+        display: flex;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- BACKGROUND GRID -->
+  <div class="bg-grid"></div>
+
+  <!-- TOAST NOTIFICATION CONTAINER -->
+  <div id="toast-container"></div>
+
+  <!-- SPINNER OVERLAY FOR BLOCKCHAIN CALLS -->
+  <div id="spinner-overlay" class="spinner-overlay">
+    <div class="spinner"></div>
+    <div id="spinner-text" class="spinner-text">CONNECTING TO WALLET...<br>PLEASE APPROVE IN YOUR WALLET</div>
+  </div>
+
+  <!-- SOUND TOGGLE BUTTON -->
+  <div id="sound-toggle" class="sound-toggle">
+    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" id="sound-icon">
+      <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+      <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+    </svg>
+  </div>
+
+  <!-- SCREEN 1: ONBOARDING / MAIN MENU -->
+  <div id="screen-onboarding" class="screen active">
+    <div class="logo-container">
+      <div class="logo-title">BASE RUNNER</div>
+      <div class="logo-subtitle">L2 BLOCKCHAIN NETWORK RUNNER</div>
+    </div>
+
+    <div class="glass-card">
+      <!-- Network Warning Box -->
+      <div id="network-warning" class="warning-box">
+        You are currently on Ethereum mainnet, please switch to Base network to continue
+        <button id="btn-switch-network" class="btn btn-primary" style="margin-top: 12px; margin-bottom: 0; padding: 10px; background: var(--base-blue); box-shadow: 0 4px 10px var(--base-blue-glow);">Switch to Base</button>
+      </div>
+
+      <!-- Wallet Connect Panel -->
+      <div class="wallet-status">
+        <div id="wallet-status-dot" class="wallet-dot"></div>
+        <div id="wallet-status-text" class="wallet-address">Wallet Disconnected</div>
+      </div>
+
+      <button id="btn-connect-wallet" class="btn btn-primary">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="margin-right: 4px;">
+          <path d="M19 5H5C3.89543 5 3 5.89543 3 7V17C3 18.1046 3.89543 19 5 19H19C20.1046 19 21 18.1046 21 17V7C21 5.89543 20.1046 5 19 5Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M16 12C16.5523 12 17 11.5523 17 11C17 10.4477 16.5523 10 16 10C15.4477 10 15 10.4477 15 11C15 11.5523 15.4477 12 16 12Z" fill="currentColor"/>
+          <path d="M3 10H21" stroke="currentColor" stroke-width="2"/>
+        </svg>
+        Connect Wallet
+      </button>
+
+      <!-- Username Input -->
+      <div class="input-group">
+        <label for="username-input" class="input-label">Runner Name</label>
+        <input type="text" id="username-input" class="text-input" placeholder="Enter name..." maxlength="15">
+      </div>
+
+      <!-- Blockchain Check-in Button -->
+      <button id="btn-checkin" class="btn btn-secondary" disabled>
+        Daily Web3 Check-In
+      </button>
+
+      <!-- Start Game Button -->
+      <button id="btn-start-game" class="btn btn-primary" style="background: linear-gradient(135deg, #00FF88, #00B359); box-shadow: 0 4px 15px rgba(0, 255, 136, 0.3);" disabled>
+        Start Running
+      </button>
+
+
+
+      <div class="instructions" style="text-align: left; border-top: 1px solid rgba(0, 82, 255, 0.2); padding-top: 15px; margin-top: 15px;">
+        <div style="font-size: 9px; font-family: 'Press Start 2P', monospace; color: var(--electric-cyan); margin-bottom: 8px;">[ HOW TO PLAY ]</div>
+        <p style="margin-bottom: 12px; font-size: 11px; color: #A0AEC0; line-height: 1.5;">
+          You are a sleek data runner transmitting packets through the <strong>Base L2 Network</strong>. Traverse 10 network levels (nodes) and safely reach the <strong>Goal Node</strong> to upload your run data.
+        </p>
+        
+        <div style="font-size: 9px; font-family: 'Press Start 2P', monospace; color: var(--gold); margin-bottom: 8px;">[ REWARDS & THREATS ]</div>
+        <p style="margin-bottom: 12px; font-size: 11px; color: #A0AEC0; line-height: 1.5;">
+          • Collect spinning <strong>Base "B" Coins</strong> to earn score points.<br>
+          • Avoid red glitching <strong>Corrupted Nodes</strong> (enemies) to preserve packet lives.
+        </p>
+
+        <div style="font-size: 9px; font-family: 'Press Start 2P', monospace; color: #FFFFFF; margin-bottom: 8px;">[ CONTROLS ]</div>
+        <p style="font-size: 11px; color: #A0AEC0; line-height: 1.5;">
+          • <strong>Move:</strong> A/D or Left/Right arrows<br>
+          • <strong>Jump:</strong> Spacebar, W, or Up arrow
+        </p>
+      </div>
+      <a href="https://x.com/theblurryface0" target="_blank" class="credit-link">Built by @theblurryface0</a>
+    </div>
+  </div>
+
+  <!-- SCREEN 2: GAMEPLAY CONTAINER -->
+  <div id="screen-gameplay" class="screen">
+    <!-- HUD OVERLAY -->
+    <div id="hud-overlay">
+      <div class="hud-top">
+        <div class="hud-stat hud-stat-danger" id="hud-lives">
+          <span>LIVES:</span> <span id="lives-val">3</span>
+        </div>
+        <div class="hud-stat hud-stat-gold" id="hud-coins">
+          <!-- Custom B-Coin style -->
+          <span style="display:inline-block; border-radius:50%; background:var(--gold); color:#000; width:14px; height:14px; line-height:14px; text-align:center; font-size:8px; font-weight:bold; font-family:sans-serif; margin-right:3px;">B</span>
+          <span id="coins-val">00</span>
+        </div>
+        <div class="hud-stat hud-stat-blue" id="hud-score">
+          <span>SCORE:</span> <span id="score-val">0000</span>
+        </div>
+        <div class="hud-stat" id="hud-level" style="border-color:#FFFFFF; color:#FFFFFF;">
+          <span>LVL:</span> <span id="level-val">1/10</span>
+        </div>
+      </div>
+
+      <!-- MOBILE CONTROLS -->
+      <div id="mobile-controls">
+        <div class="dpad">
+          <button id="btn-left" class="control-btn">&larr;</button>
+          <button id="btn-right" class="control-btn">&rarr;</button>
+        </div>
+        <div class="jump-btn-container">
+          <button id="btn-jump" class="control-btn action-btn">JUMP</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- CANVAS PORTPORT -->
+    <div id="game-container">
+      <canvas id="game-canvas"></canvas>
+    </div>
+  </div>
+
+  <!-- SCREEN 3: LEVEL COMPLETE -->
+  <div id="screen-level-complete" class="screen">
+    <div class="glass-card" style="text-align: center;">
+      <h2 style="color: var(--electric-cyan); margin-bottom: 20px; font-size: 18px; text-shadow: 0 0 10px var(--electric-cyan-glow);">LEVEL ATTRIBUTED!</h2>
+      <p style="font-size: 14px; color: #A0AEC0; margin-bottom: 10px;" id="win-message">You successfully navigated the blockchain node.</p>
+
+      <div class="score-summary">
+        <div class="score-row">
+          <span>Level:</span>
+          <span id="summary-level">1</span>
+        </div>
+        <div class="score-row">
+          <span>Coins Collected:</span>
+          <span id="summary-coins" style="color: var(--gold);">0</span>
+        </div>
+        <div class="score-row">
+          <span>Level Score:</span>
+          <span id="summary-level-score">0</span>
+        </div>
+        <div class="score-row" style="border-top: 1px solid rgba(255,255,255,0.1); padding-top: 8px; margin-top: 8px;">
+          <span>Cumulative Score:</span>
+          <span id="summary-total-score">0</span>
+        </div>
+      </div>
+
+      <!-- Onchain score submission -->
+      <button id="btn-submit-score" class="btn btn-secondary">
+        Submit Score On-chain
+      </button>
+
+      <button id="btn-next-level" class="btn btn-primary">
+        Next Node (Level)
+      </button>
+      <a href="https://x.com/theblurryface0" target="_blank" class="credit-link">Built by @theblurryface0</a>
+    </div>
+  </div>
+
+  <!-- SCREEN 4: GAME OVER -->
+  <div id="screen-game-over" class="screen">
+    <div class="glass-card" style="text-align: center; border-color: var(--danger);">
+      <h2 class="glitch-title" data-text="NODE CORRUPTED" style="font-size: 20px; margin-bottom: 25px;">NODE CORRUPTED</h2>
+      <p style="font-size: 14px; color: #A0AEC0; margin-bottom: 20px;">Connection terminated. Your packet was dropped.</p>
+
+      <div class="score-summary" style="border-color: rgba(255, 0, 85, 0.2);">
+        <div class="score-row">
+          <span>Highest Node Reached:</span>
+          <span id="over-level">1</span>
+        </div>
+        <div class="score-row">
+          <span>Total Base Coins:</span>
+          <span id="over-coins" style="color: var(--gold);">0</span>
+        </div>
+        <div class="score-row" style="border-top: 1px solid rgba(255,0,85,0.1); padding-top: 8px; margin-top: 8px;">
+          <span>Final Score:</span>
+          <span id="over-total-score" style="color: var(--danger);">0</span>
+        </div>
+      </div>
+
+      <!-- Option to submit score even at Game Over -->
+      <button id="btn-submit-score-over" class="btn btn-secondary">
+        Submit Score On-chain
+      </button>
+
+      <button id="btn-retry" class="btn btn-danger">
+        Reboot Runner (Retry)
+      </button>
+      
+      <button id="btn-quit" class="btn btn-secondary" style="border-color: rgba(255,255,255,0.1); color: #A0AEC0;">
+        Main Menu
+      </button>
+      <a href="https://x.com/theblurryface0" target="_blank" class="credit-link">Built by @theblurryface0</a>
+    </div>
+  </div>
+
+  <!-- SCREEN 5: ALL LEVELS COMPLETE VICTORY SCREEN -->
+  <div id="screen-victory" class="screen">
+    <div class="glass-card" style="text-align: center; border-color: var(--gold);">
+      <h2 style="color: var(--gold); font-size: 18px; margin-bottom: 20px; text-shadow: 0 0 15px var(--gold-glow); animation: logoPulse 2s infinite alternate;">BLOCKCHAIN COMPLETED!</h2>
+      <p style="font-size: 13px; color: #A0AEC0; margin-bottom: 20px;">You ran through all 10 nodes of the Base network successfully!</p>
+
+      <div class="score-summary" style="border-color: rgba(255, 215, 0, 0.3);">
+        <div class="score-row">
+          <span>Total Base Coins:</span>
+          <span id="vic-coins" style="color: var(--gold);">00</span>
+        </div>
+        <div class="score-row" style="border-top: 1px solid rgba(255,215,0,0.1); padding-top: 8px; margin-top: 8px;">
+          <span>Ultimate Score:</span>
+          <span id="vic-total-score" style="color: var(--gold);">0000</span>
+        </div>
+      </div>
+
+      <button id="btn-submit-score-vic" class="btn btn-secondary">
+        Submit Final Score On-chain
+      </button>
+
+      <button id="btn-victory-home" class="btn btn-primary">
+        Return to Network Menu
+      </button>
+      <a href="https://x.com/theblurryface0" target="_blank" class="credit-link">Built by @theblurryface0</a>
+    </div>
+  </div>
+
+  <!-- JAVASCRIPT GAME ENGINE & WEB3 LOGIC -->
+  <script type="module">
+    import * as ethers from './public/ethers.min.js';
+
+    /* ----------------------------------------------------
+       BLOCKCHAIN / WEB3 SYSTEM (ETHERS.JS V6)
+       ---------------------------------------------------- */
+    const BASE_CHAIN_ID = 8453; // Base Mainnet
+    const BASE_RPC_URL = 'https://mainnet.base.org';
+    
+    // BUILDER CODES REQUIREMENT (AS SPECIFIED BY THE USER)
+    const BUILDER_CODE = "bc_sjkexp2o";
+    const BUILDER_STRING_RAW = "0x62635f736a6b6578703260f0b00802180218021802180218021802180218021v";
+    
+    // Sanitize the raw builder string to be valid hex. Ethers requires characters A-F, a-f, 0-9.
+    // We replace the trailing invalid character 'v' with '8' to preserve exact length and fit the ERC-8021 suffix formatting.
+    const BUILDER_STRING = BUILDER_STRING_RAW.endsWith('v') 
+      ? BUILDER_STRING_RAW.substring(0, BUILDER_STRING_RAW.length - 1) + '8' 
+      : BUILDER_STRING_RAW;
+
+    let provider = null;
+    let signer = null;
+    let userAddress = "";
+    let userNetworkId = null;
+    let checkedInToday = false;
+
+    // Toast Notification System
+    function showToast(message, type = "info") {
+      const container = document.getElementById('toast-container');
+      const toast = document.createElement('div');
+      toast.className = `toast ${type}`;
+      
+      let icon = "⚙️";
+      if (type === "success") icon = "✅";
+      if (type === "error") icon = "❌";
+      if (type === "info") icon = "🌐";
+
+      toast.innerHTML = `<span class="toast-icon">${icon}</span><span>${message}</span>`;
+      container.appendChild(toast);
+      
+      // Force repaint
+      toast.offsetHeight;
+      
+      toast.classList.add('show');
+      
+      setTimeout(() => {
+        toast.classList.remove('show');
+        setTimeout(() => toast.remove(), 300);
+      }, 4000);
+    }
+
+    // Toggle loading spinner
+    function setBlockchainLoading(active, text = "TRANSACTION PROCESSING...") {
+      const overlay = document.getElementById('spinner-overlay');
+      const textEl = document.getElementById('spinner-text');
+      textEl.innerHTML = text;
+      if (active) {
+        overlay.classList.add('active');
+      } else {
+        overlay.classList.remove('active');
+      }
+    }
+
+    // Check Network & Display Warnings
+    async function checkNetwork() {
+      if (!provider) return false;
+      try {
+        const network = await provider.getNetwork();
+        userNetworkId = Number(network.chainId);
+        const warningBox = document.getElementById('network-warning');
+        
+        const checkinBtn = document.getElementById('btn-checkin');
+        const submitScoreBtn = document.getElementById('btn-submit-score');
+        const submitScoreOverBtn = document.getElementById('btn-submit-score-over');
+        const submitScoreVicBtn = document.getElementById('btn-submit-score-vic');
+
+        if (userNetworkId !== BASE_CHAIN_ID) {
+          if (userAddress) {
+            warningBox.style.display = 'block';
+          } else {
+            warningBox.style.display = 'none';
+          }
+          if (checkinBtn) checkinBtn.disabled = true;
+          if (submitScoreBtn) {
+            submitScoreBtn.disabled = true;
+            submitScoreBtn.innerText = "Submission Locked (Wrong Network)";
+          }
+          if (submitScoreOverBtn) {
+            submitScoreOverBtn.disabled = true;
+            submitScoreOverBtn.innerText = "Submission Locked (Wrong Network)";
+          }
+          if (submitScoreVicBtn) {
+            submitScoreVicBtn.disabled = true;
+            submitScoreVicBtn.innerText = "Submission Locked (Wrong Network)";
+          }
+          return false;
+        } else {
+          warningBox.style.display = 'none';
+          if (checkinBtn && !checkedInToday) checkinBtn.disabled = false;
+          if (submitScoreBtn) {
+            // Only re-enable if not already submitted in this screen cycle
+            if (submitScoreBtn.innerText.includes("Locked")) {
+              submitScoreBtn.disabled = false;
+              submitScoreBtn.innerText = "Submit Score On-chain";
+            }
+          }
+          if (submitScoreOverBtn) {
+            if (submitScoreOverBtn.innerText.includes("Locked")) {
+              submitScoreOverBtn.disabled = false;
+              submitScoreOverBtn.innerText = "Submit Score On-chain";
+            }
+          }
+          if (submitScoreVicBtn) {
+            if (submitScoreVicBtn.innerText.includes("Locked")) {
+              submitScoreVicBtn.disabled = false;
+              submitScoreVicBtn.innerText = "Submit Final Score On-chain";
+            }
+          }
+          return true;
+        }
+      } catch (err) {
+        console.error("Error checking network:", err);
+        return false;
+      }
+    }
+
+    // Switch Network to Base
+    async function switchNetwork() {
+      if (!window.ethereum) return;
+      setBlockchainLoading(true, "SWITCHING NETWORK TO BASE...");
+      try {
+        await window.ethereum.request({
+          method: 'wallet_switchEthereumChain',
+          params: [{ chainId: `0x${BASE_CHAIN_ID.toString(16)}` }],
+        });
+        showToast("Switched to Base network successfully!", "success");
+      } catch (switchError) {
+        // This error code indicates that the chain has not been added to MetaMask.
+        if (switchError.code === 4902) {
+          try {
+            await window.ethereum.request({
+              method: 'wallet_addEthereumChain',
+              params: [
+                {
+                  chainId: `0x${BASE_CHAIN_ID.toString(16)}`,
+                  chainName: 'Base',
+                  nativeCurrency: {
+                    name: 'Ether',
+                    symbol: 'ETH',
+                    decimals: 18
+                  },
+                  rpcUrls: [BASE_RPC_URL],
+                  blockExplorerUrls: ['https://basescan.org']
+                }
+              ]
+            });
+            showToast("Added and switched to Base network!", "success");
+          } catch (addError) {
+            showToast("Failed to add Base network.", "error");
+          }
+        } else {
+          showToast("Failed to switch network.", "error");
+        }
+      } finally {
+        setBlockchainLoading(false);
+        initWalletConnection(false); // Reload wallet state
+      }
+    }
+
+    // Initialize Web3 Connection
+    async function initWalletConnection(requestUserConnection = false) {
+      if (window.location.search.includes('mock_wallet=true')) {
+        userAddress = "0x8453845384538453845384538453845384537777";
+        userNetworkId = BASE_CHAIN_ID;
+        const truncatedAddress = `${userAddress.substring(0, 6)}...${userAddress.substring(userAddress.length - 4)}`;
+        document.getElementById('wallet-status-text').innerText = `Connected: ${truncatedAddress} (Mock)`;
+        document.getElementById('wallet-status-dot').classList.add('connected');
+        document.getElementById('btn-connect-wallet').style.display = 'none';
+        
+        document.getElementById('btn-checkin').disabled = false;
+        updateStartGameButtonState();
+        return;
+      }
+
+      if (typeof ethers === 'undefined') {
+        document.getElementById('wallet-status-text').innerText = "Ethers.js failed to load";
+        showToast("Ethers.js library not loaded yet.", "error");
+        return;
+      }
+
+      if (typeof window.ethereum === 'undefined') {
+        document.getElementById('wallet-status-text').innerText = "MetaMask not found";
+        return;
+      }
+
+      try {
+        provider = new ethers.BrowserProvider(window.ethereum);
+        
+        // Use direct window.ethereum.request for maximum cross-wallet compatibility
+        const accounts = requestUserConnection 
+          ? await window.ethereum.request({ method: 'eth_requestAccounts' }) 
+          : await window.ethereum.request({ method: 'eth_accounts' });
+
+        if (accounts && accounts.length > 0) {
+          userAddress = accounts[0];
+          signer = await provider.getSigner(userAddress);
+          
+          const truncatedAddress = `${userAddress.substring(0, 6)}...${userAddress.substring(userAddress.length - 4)}`;
+          document.getElementById('wallet-status-text').innerText = `Connected: ${truncatedAddress}`;
+          document.getElementById('wallet-status-dot').classList.add('connected');
+          document.getElementById('btn-connect-wallet').style.display = 'none';
+          
+          // Enable actions
+          document.getElementById('btn-checkin').disabled = false;
+          updateStartGameButtonState();
+          
+          // Verify Network
+          const isCorrect = await checkNetwork();
+          if (!isCorrect) {
+            // Keep checkin disabled if wrong network
+            document.getElementById('btn-checkin').disabled = true;
+          }
+        }
+      } catch (err) {
+        console.error("Wallet connection error:", err);
+        const errMsg = err.message || JSON.stringify(err);
+        showToast(`Wallet connection failed: ${errMsg}`, "error");
+      }
+    }
+
+    // Listen to changes in network/accounts
+    if (typeof window.ethereum !== 'undefined') {
+      window.ethereum.on('accountsChanged', (accounts) => {
+        if (accounts.length === 0) {
+          // Disconnected
+          userAddress = "";
+          document.getElementById('wallet-status-text').innerText = "Wallet Disconnected";
+          document.getElementById('wallet-status-dot').classList.remove('connected');
+          document.getElementById('btn-connect-wallet').style.display = 'block';
+          document.getElementById('btn-checkin').disabled = true;
+          updateStartGameButtonState();
+        } else {
+          initWalletConnection(false);
+        }
+      });
+
+      window.ethereum.on('chainChanged', () => {
+        window.location.reload();
+      });
+    }
+
+    // Helper to convert string to UTF-8 hex
+    function stringToHex(str) {
+      let hex = '';
+      for (let i = 0; i < str.length; i++) {
+        const code = str.charCodeAt(i);
+        hex += code.toString(16).padStart(2, '0');
+      }
+      return '0x' + hex;
+    }
+
+    // Web3 Daily Check-in Transaction
+    async function triggerDailyCheckIn() {
+      if (window.location.search.includes('mock_wallet=true')) {
+        setBlockchainLoading(true, "RECORDING DAILY CHECK-IN ON-CHAIN (MOCK)...");
+        await new Promise(r => setTimeout(r, 1200));
+        checkedInToday = true;
+        showToast("Daily Check-in Successful! Reward: Active shield at start!", "success");
+        const checkinBtn = document.getElementById('btn-checkin');
+        if (checkinBtn) {
+          checkinBtn.innerText = "Checked-in Active ✅";
+          checkinBtn.disabled = true;
+        }
+        setBlockchainLoading(false);
+        return;
+      }
+
+      if (!signer) {
+        showToast("Connect your wallet first!", "error");
+        return;
+      }
+      
+      const onBase = await checkNetwork();
+      if (!onBase) {
+        showToast("You must switch to Base to check in!", "error");
+        return;
+      }
+
+      setBlockchainLoading(true, "RECORDING DAILY CHECK-IN ON-CHAIN...<br>Please approve the gas-efficient transaction.");
+
+      try {
+        // Construct transaction data: hex encoded message + builder string suffix
+        const messageHex = stringToHex("Base Runner Daily Check-in");
+        
+        // Append suffix: remove '0x' from the builder string and append it
+        const suffixClean = BUILDER_STRING.substring(2);
+        const fullCalldata = messageHex + suffixClean;
+
+        // Perform self-transaction (sends 0 ETH to oneself)
+        const tx = await signer.sendTransaction({
+          to: userAddress,
+          value: 0,
+          data: fullCalldata
+        });
+
+        showToast("Transaction submitted! Waiting for confirmations...", "info");
+        await tx.wait();
+        
+        checkedInToday = true;
+        showToast("Daily Check-in Successful! Reward: Active shield at start!", "success");
+        document.getElementById('btn-checkin').innerText = "Checked-in Active ✅";
+        document.getElementById('btn-checkin').disabled = true;
+        
+      } catch (err) {
+        console.error(err);
+        showToast(err.message.includes("user rejected") ? "Transaction rejected by user." : "Check-in failed on-chain.", "error");
+      } finally {
+        setBlockchainLoading(false);
+      }
+    }
+
+    // Web3 Submit Score Transaction
+    async function submitScoreOnChain(score) {
+      const runnerName = document.getElementById('username-input').value.trim() || "BaseRunner";
+      if (window.location.search.includes('mock_wallet=true')) {
+        setBlockchainLoading(true, `SUBMITTING SCORE ON-CHAIN (MOCK)...<br>Recording score of ${score} for runner ${runnerName}`);
+        await new Promise(r => setTimeout(r, 1200));
+        showToast(`Score submitted to Base blockchain! Tx Hash: 0x62635f736a6b6578703260f...`, "success");
+        recordLocalLeaderboard(runnerName, score);
+        
+        document.getElementById('btn-submit-score').disabled = true;
+        document.getElementById('btn-submit-score-over').disabled = true;
+        document.getElementById('btn-submit-score-vic').disabled = true;
+        setBlockchainLoading(false);
+        return;
+      }
+
+      if (!signer) {
+        showToast("Connect wallet to write score on-chain!", "error");
+        return;
+      }
+      
+      const onBase = await checkNetwork();
+      if (!onBase) {
+        showToast("Switch to Base Network to record score on-chain!", "error");
+        return;
+      }
+
+      setBlockchainLoading(true, `SUBMITTING SCORE ON-CHAIN...<br>Recording score of ${score} for runner ${runnerName}`);
+
+      try {
+        const messageHex = stringToHex(`Base Runner Score:${runnerName}:${score}`);
+        const suffixClean = BUILDER_STRING.substring(2);
+        const fullCalldata = messageHex + suffixClean;
+
+        const tx = await signer.sendTransaction({
+          to: userAddress, // Self-attestation transaction
+          value: 0,
+          data: fullCalldata
+        });
+
+        showToast("Submitting score... Please wait.", "info");
+        const receipt = await tx.wait();
+        
+        showToast(`Score submitted to Base blockchain! Tx Hash: ${receipt.hash.substring(0, 10)}...`, "success");
+        
+        // Record score locally for Leaderboards
+        recordLocalLeaderboard(runnerName, score);
+        
+        // Disable submission button
+        document.getElementById('btn-submit-score').disabled = true;
+        document.getElementById('btn-submit-score-over').disabled = true;
+        document.getElementById('btn-submit-score-vic').disabled = true;
+      } catch (err) {
+        console.error(err);
+        showToast(err.message.includes("user rejected") ? "Transaction rejected." : "Score submission failed.", "error");
+      } finally {
+        setBlockchainLoading(false);
+      }
+    }
+
+    // Local Leaderboard Logic
+    function recordLocalLeaderboard(name, score) {
+      let scores = [];
+      try {
+        scores = JSON.parse(localStorage.getItem('baserunner_leaderboard') || '[]');
+      } catch (e) {}
+
+      scores.push({ name, score, date: new Date().toLocaleDateString() });
+      scores.sort((a, b) => b.score - a.score);
+      scores = scores.slice(0, 5); // Keep top 5
+
+      localStorage.setItem('baserunner_leaderboard', JSON.stringify(scores));
+      renderLeaderboard();
+    }
+
+    function renderLeaderboard() {
+      const listEl = document.getElementById('leaderboard-list');
+      if (!listEl) return;
+
+      let scores = [];
+      try {
+        scores = JSON.parse(localStorage.getItem('baserunner_leaderboard') || '[]');
+      } catch (e) {}
+
+      if (scores.length === 0) {
+        listEl.innerHTML = '<div style="text-align: center; color: #718096; font-size: 11px; padding: 10px 0;">No runs recorded yet.</div>';
+        return;
+      }
+
+      listEl.innerHTML = scores.map(s => `
+        <div class="leaderboard-row">
+          <span class="leaderboard-name">${s.name}</span>
+          <span class="leaderboard-score">${s.score}</span>
+        </div>
+      `).join('');
+    }
+
+
+    /* ----------------------------------------------------
+       SOUND SYSTEM (WEB AUDIO API Synthesizer)
+       ---------------------------------------------------- */
+    let audioCtx = null;
+    let soundEnabled = true;
+
+    function initAudio() {
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+    }
+
+    function playSound(type) {
+      if (!soundEnabled) return;
+      initAudio();
+      if (!audioCtx) return;
+
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+
+      const now = audioCtx.currentTime;
+
+      if (type === 'jump') {
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(150, now);
+        osc.frequency.exponentialRampToValueAtTime(600, now + 0.15);
+        gain.gain.setValueAtTime(0.15, now);
+        gain.gain.linearRampToValueAtTime(0.01, now + 0.15);
+        osc.start(now);
+        osc.stop(now + 0.15);
+      } 
+      else if (type === 'coin') {
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(880, now);
+        osc.frequency.setValueAtTime(1174, now + 0.08); // High note chime
+        gain.gain.setValueAtTime(0.1, now);
+        gain.gain.linearRampToValueAtTime(0.01, now + 0.25);
+        osc.start(now);
+        osc.stop(now + 0.25);
+      }
+      else if (type === 'powerup') {
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(300, now);
+        osc.frequency.linearRampToValueAtTime(800, now + 0.3);
+        gain.gain.setValueAtTime(0.08, now);
+        gain.gain.linearRampToValueAtTime(0.01, now + 0.3);
+        osc.start(now);
+        osc.stop(now + 0.3);
+      }
+      else if (type === 'hurt') {
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(300, now);
+        osc.frequency.linearRampToValueAtTime(80, now + 0.25);
+        gain.gain.setValueAtTime(0.2, now);
+        gain.gain.linearRampToValueAtTime(0.01, now + 0.25);
+        
+        // Add white noise for distortion effect
+        try {
+          const bufferSize = audioCtx.sampleRate * 0.25;
+          const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+          const data = buffer.getChannelData(0);
+          for (let i = 0; i < bufferSize; i++) {
+            data[i] = Math.random() * 2 - 1;
+          }
+          const noise = audioCtx.createBufferSource();
+          noise.buffer = buffer;
+          const noiseGain = audioCtx.createGain();
+          noiseGain.gain.setValueAtTime(0.1, now);
+          noiseGain.gain.linearRampToValueAtTime(0.01, now + 0.25);
+          noise.connect(noiseGain);
+          noiseGain.connect(audioCtx.destination);
+          noise.start(now);
+          noise.stop(now + 0.25);
+        } catch(e) {}
+
+        osc.start(now);
+        osc.stop(now + 0.25);
+      }
+      else if (type === 'victory') {
+        // Melodic celebratory chime
+        const notes = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6
+        notes.forEach((freq, idx) => {
+          const noteOsc = audioCtx.createOscillator();
+          const noteGain = audioCtx.createGain();
+          noteOsc.connect(noteGain);
+          noteGain.connect(audioCtx.destination);
+          
+          noteOsc.type = 'triangle';
+          noteOsc.frequency.setValueAtTime(freq, now + idx * 0.1);
+          noteGain.gain.setValueAtTime(0.12, now + idx * 0.1);
+          noteGain.gain.linearRampToValueAtTime(0.01, now + idx * 0.1 + 0.3);
+          
+          noteOsc.start(now + idx * 0.1);
+          noteOsc.stop(now + idx * 0.1 + 0.3);
+        });
+      }
+      else if (type === 'gameover') {
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(200, now);
+        osc.frequency.linearRampToValueAtTime(40, now + 0.6);
+        gain.gain.setValueAtTime(0.2, now);
+        gain.gain.linearRampToValueAtTime(0.01, now + 0.6);
+        osc.start(now);
+        osc.stop(now + 0.6);
+      }
+    }
+
+    document.getElementById('sound-toggle').addEventListener('click', () => {
+      soundEnabled = !soundEnabled;
+      const icon = document.getElementById('sound-icon');
+      if (soundEnabled) {
+        icon.innerHTML = `
+          <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+          <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+        `;
+        showToast("Audio On", "info");
+      } else {
+        icon.innerHTML = `
+          <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+          <line x1="23" y1="9" x2="17" y2="15"></line>
+          <line x1="17" y1="9" x2="23" y2="15"></line>
+        `;
+        showToast("Audio Muted", "info");
+      }
+    });
+
+
+    /* ----------------------------------------------------
+       GAME MECHANICS & CAMERA
+       ---------------------------------------------------- */
+    const canvas = document.getElementById('game-canvas');
+    const ctx = canvas.getContext('2d');
+
+    // UI Screen Navigator
+    function showScreen(screenId) {
+      document.querySelectorAll('.screen').forEach(scr => scr.classList.remove('active'));
+      document.getElementById(screenId).classList.add('active');
+    }
+
+    // Set responsive canvas sizing
+    function resizeCanvas() {
+      canvas.width = Math.min(window.innerWidth, 960);
+      canvas.height = Math.min(window.innerHeight * 0.7, 480);
+    }
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    // Key handlers
+    const keys = {
+      left: false,
+      right: false,
+      up: false
+    };
+
+    window.addEventListener('keydown', (e) => {
+      if (e.code === 'KeyA' || e.code === 'ArrowLeft') keys.left = true;
+      if (e.code === 'KeyD' || e.code === 'ArrowRight') keys.right = true;
+      if (e.code === 'KeyW' || e.code === 'ArrowUp' || e.code === 'Space') keys.up = true;
+    });
+
+    window.addEventListener('keyup', (e) => {
+      if (e.code === 'KeyA' || e.code === 'ArrowLeft') keys.left = false;
+      if (e.code === 'KeyD' || e.code === 'ArrowRight') keys.right = false;
+      if (e.code === 'KeyW' || e.code === 'ArrowUp' || e.code === 'Space') keys.up = false;
+    });
+
+    // Mobile controls mapping
+    const setupMobileButton = (id, key) => {
+      const btn = document.getElementById(id);
+      btn.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        keys[key] = true;
+      });
+      btn.addEventListener('touchend', (e) => {
+        e.preventDefault();
+        keys[key] = false;
+      });
+    };
+    setupMobileButton('btn-left', 'left');
+    setupMobileButton('btn-right', 'right');
+    setupMobileButton('btn-jump', 'up');
+
+    // Enable button start game check
+    const usernameInput = document.getElementById('username-input');
+    function updateStartGameButtonState() {
+      const nameSet = usernameInput.value.trim().length > 0;
+      const walletConnected = userAddress.length > 0;
+      
+      // Start is enabled once wallet is connected and username is set
+      document.getElementById('btn-start-game').disabled = !(nameSet && walletConnected);
+    }
+
+    usernameInput.addEventListener('input', updateStartGameButtonState);
+
+    // Initial state definitions
+    let gameState = {
+      level: 1,
+      lives: 3,
+      coins: 0,
+      totalScore: 0,
+      levelScore: 0,
+      activeShield: false,
+      activeSpeed: false,
+      speedTimeout: 0,
+      shieldTimeout: 0
+    };
+
+    // Particle System
+    class Particle {
+      constructor(x, y, vx, vy, color, size, life) {
+        this.x = x;
+        this.y = y;
+        this.vx = vx;
+        this.vy = vy;
+        this.color = color;
+        this.size = size;
+        this.life = life;
+        this.maxLife = life;
+      }
+      update() {
+        this.x += this.vx;
+        this.y += this.vy;
+        this.life--;
+      }
+      draw(c) {
+        c.save();
+        c.globalAlpha = this.life / this.maxLife;
+        c.shadowColor = this.color;
+        c.shadowBlur = 6;
+        c.fillStyle = this.color;
+        c.fillRect(this.x, this.y, this.size, this.size);
+        c.restore();
+      }
+    }
+
+    let particles = [];
+    function spawnExplosion(x, y, color, count = 10) {
+      for (let i = 0; i < count; i++) {
+        const vx = (Math.random() - 0.5) * 6;
+        const vy = (Math.random() - 0.5) * 6 - 2;
+        const size = Math.random() * 3 + 2;
+        const life = Math.random() * 20 + 20;
+        particles.push(new Particle(x, y, vx, vy, color, size, life));
+      }
+    }
+
+    // Platform Tile Definition
+    const TILE_SIZE = 32;
+
+    // Tile maps for Levels 1 to 10
+    const LEVELS = [
+      // Level 1: Linear, basic jumps, 1 glitch bot, easy introduction
+      [
+        "                                                                ",
+        "                                                                ",
+        "                                                                ",
+        "                                                                ",
+        "                                                                ",
+        "                                                                ",
+        "                                                                ",
+        "                                                                ",
+        "         C   C   C                                    G         ",
+        "   P   ##########              E                      #         ",
+        "################################################################"
+      ],
+      // Level 2: Simple steps, speed power-up introduction
+      [
+        "                                                                ",
+        "                                                                ",
+        "                                                                ",
+        "                                                                ",
+        "                                                                ",
+        "                                           C   C                ",
+        "                                         #########              ",
+        "                             S                                  ",
+        "         C   C            #######                             G ",
+        "   P   #########                                              # ",
+        "#################   E   #############     E      ###############"
+      ],
+      // Level 3: Gaps and verticality, shield introduction
+      [
+        "                                                                ",
+        "                                                                ",
+        "                                        ##########              ",
+        "                                       #          #             ",
+        "                            C  C      #                         ",
+        "                          ########## #            E             ",
+        "                                    #                           ",
+        "             H                                                G ",
+        "   P     #########                                            # ",
+        "#######             #####              #######   E   ###########",
+        "#######             #####              #########################"
+      ],
+      // Level 4: Speed and high leaps
+      [
+        "                                                                ",
+        "                                           C   C   C            ",
+        "                                         #############          ",
+        "                                                                ",
+        "                               S                                ",
+        "                            #######                             ",
+        "             E                                                  ",
+        "         #########                                            G ",
+        "   P                                                          # ",
+        "#######             E             ######   E   #################",
+        "#######           #####           ##############################"
+      ],
+      // Level 5: Corrupted node density
+      [
+        "                                                                ",
+        "                                                                ",
+        "                                                                ",
+        "                               C   C   C   C                    ",
+        "                            #################                   ",
+        "             H                                                  ",
+        "          #######       E                       E               ",
+        "                                    E                           ",
+        "   P               ###########            #############       G ",
+        "#######     ###                    ####                       # ",
+        "#######     ###                    ####    #####################"
+      ],
+      // Level 6: Floating matrix maze
+      [
+        "                                                                ",
+        "                            #########                           ",
+        "                           #         #                          ",
+        "                          #   C   C   #                         ",
+        "                         #   #######   #                        ",
+        "              E         #               #                       ",
+        "         ##########                                             ",
+        "                                            E                 G ",
+        "   P                  S                ##########             # ",
+        "#######           ##########                                  # ",
+        "#######   E   ###            E   ####              E   #########"
+      ],
+      // Level 7: The Chasm Run
+      [
+        "                                                                ",
+        "                                 C   C   C                      ",
+        "                                #########                       ",
+        "                                                                ",
+        "                        E                                       ",
+        "             H       #######                                    ",
+        "         #########                                              ",
+        "                                                 E            G ",
+        "   P                                         #########        # ",
+        "#######                  E      #####                         # ",
+        "#######                 #####   #####    ##              #######"
+      ],
+      // Level 8: Precision Jump Matrix
+      [
+        "                                                                ",
+        "                                                                ",
+        "                                    C   C                       ",
+        "                                 ###########                    ",
+        "                      E                                         ",
+        "          S        #######                     #######          ",
+        "       #######                               #       #          ",
+        "                                            #         #       G ",
+        "   P                                       #    C   C  #      # ",
+        "#######     E      #######     E      #####   #########       # ",
+        "#######   #####    #######   #####    ##########################"
+      ],
+      // Level 9: Neon Dash (Strict timing, speed boosts required)
+      [
+        "                                                                ",
+        "                                                                ",
+        "                                           C   C   C            ",
+        "                                         #############          ",
+        "                                S                               ",
+        "                             #######                            ",
+        "             E      E                                           ",
+        "         #################                                    G ",
+        "   P                                                          # ",
+        "#######                             E             E           # ",
+        "#######   E   E   E   E   E       #####         #####    #######"
+      ],
+      // Level 10: Complete Node Convergence (Difficult, long levels)
+      [
+        "                                                                ",
+        "                                             C    C    C        ",
+        "                                           ###############      ",
+        "                               S                                ",
+        "                            #######                             ",
+        "             H                                                  ",
+        "          #######       E            E            E             ",
+        "                                                                ",
+        "   P               ###########            #############       G ",
+        "#######     ###                    ####                       # ",
+        "#######     ###   E   E   E   E    ####    E      E    #########",
+        "################################################################"
+      ]
+    ];
+
+    // Game Classes
+    class Player {
+      constructor() {
+        this.x = 0;
+        this.y = 0;
+        this.vx = 0;
+        this.vy = 0;
+        this.width = 20;
+        this.height = 36;
+        this.speed = 4;
+        this.jumpForce = 9.5;
+        this.grounded = false;
+        this.doubleJumpsLeft = 1;
+        this.direction = 1; // 1 = right, -1 = left
+        this.frameTimer = 0;
+        this.animFrame = 0;
+        this.trailTimer = 0;
+      }
+
+      reset(x, y) {
+        this.x = x;
+        this.y = y;
+        this.vx = 0;
+        this.vy = 0;
+        this.grounded = false;
+        this.doubleJumpsLeft = 1;
+        
+        // If daily checked in, award an invincibility shield at start!
+        if (checkedInToday) {
+          gameState.activeShield = true;
+          gameState.shieldTimeout = 300; // ~5 seconds of protection
+          showToast("Daily Check-in Active: Node Shield Online!", "success");
+        } else {
+          gameState.activeShield = false;
+          gameState.shieldTimeout = 0;
+        }
+        
+        gameState.activeSpeed = false;
+        gameState.speedTimeout = 0;
+      }
+
+      update() {
+        // Handle horizontal movement acceleration
+        let currentMaxSpeed = this.speed;
+        if (gameState.activeSpeed) {
+          currentMaxSpeed *= 1.6;
+        }
+
+        const acceleration = 0.5;
+        const friction = 0.85;
+
+        if (keys.left) {
+          this.vx -= acceleration;
+          if (this.vx < -currentMaxSpeed) this.vx = -currentMaxSpeed;
+          this.direction = -1;
+        } else if (keys.right) {
+          this.vx += acceleration;
+          if (this.vx > currentMaxSpeed) this.vx = currentMaxSpeed;
+          this.direction = 1;
+        } else {
+          this.vx *= friction;
+          if (Math.abs(this.vx) < 0.1) this.vx = 0;
+        }
+
+        // Apply gravity
+        this.vy += 0.45; // Gravity acceleration
+        const terminalVelocity = 12;
+        if (this.vy > terminalVelocity) this.vy = terminalVelocity;
+
+        // Handle Jumps
+        if (keys.up) {
+          if (this.grounded) {
+            this.vy = -this.jumpForce;
+            this.grounded = false;
+            keys.up = false; // Require tap
+            playSound('jump');
+            spawnExplosion(this.x + this.width/2, this.y + this.height, 'var(--electric-cyan)', 6);
+          } else if (this.doubleJumpsLeft > 0) {
+            this.vy = -this.jumpForce * 0.9;
+            this.doubleJumpsLeft--;
+            keys.up = false;
+            playSound('jump');
+            spawnExplosion(this.x + this.width/2, this.y + this.height, 'var(--electric-cyan)', 8);
+          }
+        }
+
+        // Move positions
+        this.x += this.vx;
+        this.resolveCollisions('horizontal');
+
+        this.y += this.vy;
+        this.grounded = false;
+        this.resolveCollisions('vertical');
+
+        // Animation timing
+        if (Math.abs(this.vx) > 0.2 && this.grounded) {
+          this.frameTimer++;
+          if (this.frameTimer > 6) {
+            this.animFrame = (this.animFrame + 1) % 4;
+            this.frameTimer = 0;
+          }
+        } else {
+          this.animFrame = 0;
+        }
+
+        // Glowing Blue Trail sparks
+        if (Math.abs(this.vx) > 1 || !this.grounded) {
+          this.trailTimer++;
+          if (this.trailTimer % 2 === 0) {
+            const color = gameState.activeSpeed ? varColor('electric-cyan') : varColor('base-blue');
+            particles.push(new Particle(
+              this.x + (this.vx > 0 ? 0 : this.width) + (Math.random() * 4 - 2),
+              this.y + Math.random() * this.height,
+              -this.vx * 0.2 + (Math.random() - 0.5),
+              (Math.random() - 0.5) * 2,
+              color,
+              Math.random() * 3 + 1.5,
+              Math.random() * 15 + 10
+            ));
+          }
+        }
+      }
+
+      resolveCollisions(dir) {
+        const levelData = LEVELS[gameState.level - 1];
+        const bounds = this.getBounds();
+
+        // Calculate tile range to check
+        const startX = Math.floor(Math.max(0, bounds.left) / TILE_SIZE);
+        const endX = Math.floor(Math.min(levelData[0].length * TILE_SIZE, bounds.right) / TILE_SIZE);
+        const startY = Math.floor(Math.max(0, bounds.top) / TILE_SIZE);
+        const endY = Math.floor(Math.min(levelData.length * TILE_SIZE, bounds.bottom) / TILE_SIZE);
+
+        for (let row = startY; row <= endY; row++) {
+          for (let col = startX; col <= endX; col++) {
+            if (row >= levelData.length || col >= levelData[0].length) continue;
+            
+            const tile = levelData[row][col];
+            if (tile === '#') { // Block platform
+              const tileLeft = col * TILE_SIZE;
+              const tileRight = tileLeft + TILE_SIZE;
+              const tileTop = row * TILE_SIZE;
+              const tileBottom = tileTop + TILE_SIZE;
+
+              if (dir === 'horizontal') {
+                if (bounds.right > tileLeft && bounds.left < tileRight &&
+                    bounds.bottom > tileTop && bounds.top < tileBottom) {
+                  if (this.vx > 0) {
+                    this.x = tileLeft - this.width;
+                  } else if (this.vx < 0) {
+                    this.x = tileRight;
+                  }
+                  this.vx = 0;
+                }
+              } else if (dir === 'vertical') {
+                if (bounds.right > tileLeft && bounds.left < tileRight &&
+                    bounds.bottom > tileTop && bounds.top < tileBottom) {
+                  if (this.vy > 0) {
+                    this.y = tileTop - this.height;
+                    this.grounded = true;
+                    this.doubleJumpsLeft = 1;
+                  } else if (this.vy < 0) {
+                    this.y = tileBottom;
+                  }
+                  this.vy = 0;
+                }
+              }
+            }
+          }
+        }
+      }
+
+      getBounds() {
+        return {
+          left: this.x,
+          right: this.x + this.width,
+          top: this.y,
+          bottom: this.y + this.height
+        };
+      }
+
+      draw() {
+        ctx.save();
+
+        // Glow aura
+        if (gameState.activeShield) {
+          ctx.shadowColor = 'rgba(255, 215, 0, 0.8)';
+          ctx.shadowBlur = 15;
+        } else if (gameState.activeSpeed) {
+          ctx.shadowColor = varColor('electric-cyan');
+          ctx.shadowBlur = 12;
+        } else {
+          ctx.shadowColor = varColor('base-blue');
+          ctx.shadowBlur = 8;
+        }
+
+        // Draw Player Body (Futuristic cyber-suit runner)
+        ctx.translate(this.x + this.width / 2, this.y + this.height / 2);
+        ctx.scale(this.direction, 1);
+
+        // Pixel-art Runner Styling
+        ctx.fillStyle = '#E2E8F0'; // White metal plating
+        
+        // Head
+        ctx.fillRect(-6, -18, 12, 10);
+        // Visor (Neon blue/cyan)
+        ctx.fillStyle = gameState.activeSpeed ? varColor('electric-cyan') : varColor('base-blue');
+        ctx.fillRect(0, -15, 6, 3);
+
+        // Torso/Suit
+        ctx.fillStyle = varColor('base-blue');
+        ctx.fillRect(-8, -8, 16, 16);
+
+        // Dynamic limbs based on running frame
+        ctx.fillStyle = '#475569';
+        if (this.grounded && Math.abs(this.vx) > 0.2) {
+          if (this.animFrame === 0) {
+            // Legs frame 0
+            ctx.fillRect(-6, 8, 4, 10);
+            ctx.fillRect(2, 8, 4, 10);
+          } else if (this.animFrame === 1) {
+            // Legs frame 1
+            ctx.fillRect(-8, 8, 4, 8);
+            ctx.fillRect(4, 8, 4, 8);
+          } else if (this.animFrame === 2) {
+            // Legs frame 2
+            ctx.fillRect(-3, 8, 4, 10);
+            ctx.fillRect(1, 8, 4, 10);
+          } else {
+            // Legs frame 3
+            ctx.fillRect(-1, 8, 4, 8);
+            ctx.fillRect(-7, 8, 4, 8);
+          }
+        } else {
+          // Jump/idle pose legs
+          ctx.fillRect(-6, 8, 4, 10);
+          ctx.fillRect(2, 8, 4, 10);
+        }
+
+        // Gold highlight lines
+        ctx.fillStyle = varColor('gold');
+        ctx.fillRect(-8, -2, 2, 4);
+
+        ctx.restore();
+
+        // Draw Shield Aura if active
+        if (gameState.activeShield) {
+          ctx.save();
+          ctx.beginPath();
+          ctx.arc(this.x + this.width / 2, this.y + this.height / 2, 24, 0, Math.PI * 2);
+          ctx.strokeStyle = 'rgba(255, 215, 0, 0.8)';
+          ctx.lineWidth = 2.5;
+          ctx.setLineDash([6, 4]);
+          ctx.shadowColor = varColor('gold');
+          ctx.shadowBlur = 12;
+          ctx.stroke();
+          ctx.restore();
+        }
+      }
+    }
+
+    // Helper to resolve CSS variables for context drawings
+    function varColor(name) {
+      if (name === 'gold' || name === 'var(--gold)') return '#FFD700';
+      if (name === 'cyan' || name === 'electric-cyan' || name === 'var(--electric-cyan)') return '#00F0FF';
+      if (name === 'red' || name === 'danger' || name === 'var(--danger)') return '#FF0055';
+      if (name === 'blue' || name === 'base-blue' || name === 'var(--base-blue)') return '#0052FF';
+      return '#FFFFFF';
+    }
+
+    class Coin {
+      constructor(col, row) {
+        this.x = col * TILE_SIZE + TILE_SIZE / 2;
+        this.y = row * TILE_SIZE + TILE_SIZE / 2;
+        this.radius = 8;
+        this.angle = Math.random() * Math.PI; // Dynamic spin initialization
+      }
+      update() {
+        this.angle += 0.05;
+      }
+      draw() {
+        ctx.save();
+        ctx.translate(this.x, this.y);
+        
+        // Spin projection (3D scaling)
+        const scaleX = Math.cos(this.angle);
+        ctx.scale(scaleX, 1);
+
+        ctx.shadowColor = varColor('gold');
+        ctx.shadowBlur = 10;
+
+        // Base Coin gold style
+        ctx.beginPath();
+        ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
+        ctx.fillStyle = varColor('gold');
+        ctx.fill();
+
+        // Draw inner B character
+        ctx.fillStyle = '#050A1A';
+        ctx.font = 'bold 8px monospace';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('B', 0, 0);
+
+        ctx.restore();
+      }
+      checkCollision(playerBounds) {
+        // Simple circle-rectangle approximation
+        const closestX = Math.max(playerBounds.left, Math.min(this.x, playerBounds.right));
+        const closestY = Math.max(playerBounds.top, Math.min(this.y, playerBounds.bottom));
+        
+        const distX = this.x - closestX;
+        const distY = this.y - closestY;
+        const distance = Math.sqrt((distX * distX) + (distY * distY));
+        
+        return distance < this.radius;
+      }
+    }
+
+    class Enemy {
+      constructor(col, row) {
+        this.x = col * TILE_SIZE;
+        this.y = row * TILE_SIZE;
+        this.width = 24;
+        this.height = 24;
+        this.vx = 1.8;
+        this.glitchTimer = 0;
+        this.glitchOffset = { x: 0, y: 0 };
+        this.patrolRange = 120;
+        this.startX = this.x;
+      }
+      update() {
+        // Patrol logic
+        this.x += this.vx;
+        if (Math.abs(this.x - this.startX) > this.patrolRange) {
+          this.vx = -this.vx;
+        }
+
+        // Glitch state updates
+        this.glitchTimer++;
+        if (this.glitchTimer % 15 === 0) {
+          this.glitchOffset.x = (Math.random() - 0.5) * 6;
+          this.glitchOffset.y = (Math.random() - 0.5) * 4;
+        } else if (this.glitchTimer % 15 > 3) {
+          this.glitchOffset.x = 0;
+          this.glitchOffset.y = 0;
+        }
+      }
+      draw() {
+        ctx.save();
+        ctx.shadowColor = varColor('danger');
+        ctx.shadowBlur = 10;
+        
+        // Draw glitched red block
+        ctx.fillStyle = varColor('danger');
+        ctx.fillRect(
+          this.x + this.glitchOffset.x,
+          this.y + this.glitchOffset.y,
+          this.width,
+          this.height
+        );
+
+        // Core visual node pattern
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fillRect(
+          this.x + 4 + this.glitchOffset.x,
+          this.y + 4 + this.glitchOffset.y,
+          6,
+          6
+        );
+        ctx.fillRect(
+          this.x + 14 + this.glitchOffset.x,
+          this.y + 4 + this.glitchOffset.y,
+          6,
+          6
+        );
+
+        ctx.restore();
+      }
+      checkCollision(playerBounds) {
+        return (
+          this.x < playerBounds.right &&
+          this.x + this.width > playerBounds.left &&
+          this.y < playerBounds.bottom &&
+          this.y + this.height > playerBounds.top
+        );
+      }
+    }
+
+    // Power-up Superclass
+    class Powerup {
+      constructor(col, row, type) {
+        this.x = col * TILE_SIZE + TILE_SIZE / 2;
+        this.y = row * TILE_SIZE + TILE_SIZE / 2;
+        this.radius = 9;
+        this.type = type; // 'speed' or 'shield'
+        this.hoverOffset = 0;
+        this.hoverSpeed = 0.05;
+        this.hoverTimer = Math.random() * Math.PI;
+      }
+      update() {
+        this.hoverTimer += this.hoverSpeed;
+        this.hoverOffset = Math.sin(this.hoverTimer) * 4;
+      }
+      draw() {
+        ctx.save();
+        ctx.translate(this.x, this.y + this.hoverOffset);
+        
+        if (this.type === 'speed') {
+          ctx.shadowColor = varColor('electric-cyan');
+          ctx.shadowBlur = 12;
+          ctx.fillStyle = varColor('electric-cyan');
+          // Cyan lightning bolt pill
+          ctx.beginPath();
+          ctx.moveTo(-4, -8);
+          ctx.lineTo(6, -2);
+          ctx.lineTo(0, 0);
+          ctx.lineTo(6, 8);
+          ctx.lineTo(-6, 2);
+          ctx.lineTo(-1, 0);
+          ctx.closePath();
+          ctx.fill();
+        } else if (this.type === 'shield') {
+          ctx.shadowColor = varColor('gold');
+          ctx.shadowBlur = 12;
+          ctx.fillStyle = varColor('gold');
+          // Gold shield badge
+          ctx.beginPath();
+          ctx.moveTo(0, -9);
+          ctx.lineTo(7, -5);
+          ctx.lineTo(7, 1);
+          ctx.quadraticCurveTo(7, 6, 0, 9);
+          ctx.quadraticCurveTo(-7, 6, -7, 1);
+          ctx.lineTo(-7, -5);
+          ctx.closePath();
+          ctx.fill();
+        }
+
+        ctx.restore();
+      }
+      checkCollision(playerBounds) {
+        const closestX = Math.max(playerBounds.left, Math.min(this.x, playerBounds.right));
+        const closestY = Math.max(playerBounds.top, Math.min(this.y + this.hoverOffset, playerBounds.bottom));
+        
+        const distX = this.x - closestX;
+        const distY = (this.y + this.hoverOffset) - closestY;
+        const distance = Math.sqrt((distX * distX) + (distY * distY));
+        
+        return distance < this.radius;
+      }
+    }
+
+    // Camera object
+    const camera = {
+      x: 0,
+      y: 0,
+      width: 0,
+      height: 0,
+      init() {
+        this.width = canvas.width;
+        this.height = canvas.height;
+      },
+      update(targetX, mapWidth) {
+        this.width = canvas.width;
+        this.height = canvas.height;
+        
+        // Target is player center. Camera floats/interpolates.
+        const idealX = targetX - this.width / 2.5;
+        this.x += (idealX - this.x) * 0.08;
+        
+        // Boundaries restriction
+        if (this.x < 0) this.x = 0;
+        const maxScrollX = mapWidth - this.width;
+        if (this.x > maxScrollX) this.x = maxScrollX;
+      }
+    };
+
+    // Level Managers
+    let player = new Player();
+    let coins = [];
+    let enemies = [];
+    let powerups = [];
+    let goalBlock = { x: 0, y: 0, width: 32, height: 64 };
+    let mapWidth = 0;
+    let animationFrameId = null;
+
+    function buildLevel(lvlNum) {
+      const levelData = LEVELS[lvlNum - 1];
+      coins = [];
+      enemies = [];
+      powerups = [];
+      particles = [];
+      mapWidth = levelData[0].length * TILE_SIZE;
+
+      for (let row = 0; row < levelData.length; row++) {
+        for (let col = 0; col < levelData[0].length; col++) {
+          const char = levelData[row][col];
+          if (char === 'P') {
+            player.reset(col * TILE_SIZE, row * TILE_SIZE - 8);
+          } else if (char === 'C') {
+            coins.push(new Coin(col, row));
+          } else if (char === 'E') {
+            enemies.push(new Enemy(col, row));
+          } else if (char === 'S') {
+            powerups.push(new Powerup(col, row, 'speed'));
+          } else if (char === 'H') {
+            powerups.push(new Powerup(col, row, 'shield'));
+          } else if (char === 'G') {
+            goalBlock.x = col * TILE_SIZE;
+            goalBlock.y = (row - 1) * TILE_SIZE; // Goal occupies 2-block vertical height
+          }
+        }
+      }
+      
+      // Update HUD text values
+      document.getElementById('lives-val').innerText = gameState.lives;
+      document.getElementById('coins-val').innerText = String(gameState.coins).padStart(2, '0');
+      document.getElementById('score-val').innerText = String(gameState.totalScore).padStart(4, '0');
+      document.getElementById('level-val').innerText = `${gameState.level}/10`;
+    }
+
+    // Main Game Engine Loop
+    function gameLoop() {
+      // 1. UPDATE VARIABLES
+      player.update();
+      camera.update(player.x, mapWidth);
+
+      // Handle Buff timeouts
+      if (gameState.activeSpeed) {
+        gameState.speedTimeout--;
+        if (gameState.speedTimeout <= 0) {
+          gameState.activeSpeed = false;
+          showToast("Speed Boost ended", "info");
+        }
+      }
+      if (gameState.activeShield) {
+        gameState.shieldTimeout--;
+        if (gameState.shieldTimeout <= 0) {
+          gameState.activeShield = false;
+          showToast("Invincibility Shield offline", "info");
+        }
+      }
+
+      // Coins processing
+      const playerBounds = player.getBounds();
+      for (let i = coins.length - 1; i >= 0; i--) {
+        const coin = coins[i];
+        coin.update();
+        if (coin.checkCollision(playerBounds)) {
+          coins.splice(i, 1);
+          gameState.coins++;
+          gameState.totalScore += 50;
+          gameState.levelScore += 50;
+          playSound('coin');
+          document.getElementById('coins-val').innerText = String(gameState.coins).padStart(2, '0');
+          document.getElementById('score-val').innerText = String(gameState.totalScore).padStart(4, '0');
+          spawnExplosion(coin.x, coin.y, varColor('gold'), 5);
+        }
+      }
+
+      // Enemies processing
+      for (let i = enemies.length - 1; i >= 0; i--) {
+        const enemy = enemies[i];
+        enemy.update();
+        if (enemy.checkCollision(playerBounds)) {
+          if (gameState.activeShield) {
+            // Destroy node
+            enemies.splice(i, 1);
+            gameState.totalScore += 100;
+            gameState.levelScore += 100;
+            document.getElementById('score-val').innerText = String(gameState.totalScore).padStart(4, '0');
+            playSound('coin');
+            spawnExplosion(enemy.x + enemy.width/2, enemy.y + enemy.height/2, varColor('danger'), 12);
+            showToast("Corrupted Node Cleared!", "success");
+          } else {
+            // Player takes hit
+            gameState.lives--;
+            document.getElementById('lives-val').innerText = gameState.lives;
+            playSound('hurt');
+            spawnExplosion(player.x + player.width/2, player.y + player.height/2, varColor('danger'), 20);
+            
+            // Temporary invincibility on damage
+            gameState.activeShield = true;
+            gameState.shieldTimeout = 90; // 1.5s recovery
+            
+            if (gameState.lives <= 0) {
+              // Game Over
+              cancelAnimationFrame(animationFrameId);
+              playSound('gameover');
+              
+              // Set Game Over screen details
+              document.getElementById('over-level').innerText = gameState.level;
+              document.getElementById('over-coins').innerText = gameState.coins;
+              document.getElementById('over-total-score').innerText = gameState.totalScore;
+              
+              // Enable the submission button for new run
+              document.getElementById('btn-submit-score-over').disabled = false;
+              
+              showScreen('screen-game-over');
+              return;
+            } else {
+              showToast(`Hazard detected! ${gameState.lives} lives remaining.`, "error");
+            }
+          }
+        }
+      }
+
+      // Powerups processing
+      for (let i = powerups.length - 1; i >= 0; i--) {
+        const pup = powerups[i];
+        pup.update();
+        if (pup.checkCollision(playerBounds)) {
+          powerups.splice(i, 1);
+          playSound('powerup');
+          spawnExplosion(pup.x, pup.y, pup.type === 'speed' ? varColor('electric-cyan') : varColor('gold'), 10);
+          
+          if (pup.type === 'speed') {
+            gameState.activeSpeed = true;
+            gameState.speedTimeout = 240; // 4 seconds
+            showToast("Speed Protocol Activated!", "success");
+          } else if (pup.type === 'shield') {
+            gameState.activeShield = true;
+            gameState.shieldTimeout = 360; // 6 seconds
+            showToast("Invincibility Shield Deployed!", "success");
+          }
+        }
+      }
+
+      // Particles processing
+      for (let i = particles.length - 1; i >= 0; i--) {
+        particles[i].update();
+        if (particles[i].life <= 0) {
+          particles.splice(i, 1);
+        }
+      }
+
+      // Goal block checks
+      if (player.x + player.width > goalBlock.x &&
+          player.x < goalBlock.x + goalBlock.width &&
+          player.y + player.height > goalBlock.y &&
+          player.y < goalBlock.y + goalBlock.height) {
+        
+        // Node Win Condition triggered
+        cancelAnimationFrame(animationFrameId);
+        playSound('victory');
+        
+        // Prepare stats for UI complete screens
+        document.getElementById('summary-level').innerText = gameState.level;
+        document.getElementById('summary-coins').innerText = gameState.coins;
+        document.getElementById('summary-level-score').innerText = gameState.levelScore;
+        document.getElementById('summary-total-score').innerText = gameState.totalScore;
+        
+        // Reset sub button
+        document.getElementById('btn-submit-score').disabled = false;
+
+        if (gameState.level === 10) {
+          // Finished game victory!
+          document.getElementById('vic-coins').innerText = gameState.coins;
+          document.getElementById('vic-total-score').innerText = gameState.totalScore;
+          document.getElementById('btn-submit-score-vic').disabled = false;
+          showScreen('screen-victory');
+        } else {
+          showScreen('screen-level-complete');
+        }
+        return;
+      }
+
+      // Fall off bottom check
+      if (player.y > canvas.height + 100) {
+        gameState.lives--;
+        document.getElementById('lives-val').innerText = gameState.lives;
+        playSound('hurt');
+        
+        if (gameState.lives <= 0) {
+          cancelAnimationFrame(animationFrameId);
+          playSound('gameover');
+          document.getElementById('over-level').innerText = gameState.level;
+          document.getElementById('over-coins').innerText = gameState.coins;
+          document.getElementById('over-total-score').innerText = gameState.totalScore;
+          document.getElementById('btn-submit-score-over').disabled = false;
+          showScreen('screen-game-over');
+          return;
+        } else {
+          // Respawn back at start
+          showToast("Re-indexing runner...", "error");
+          const levelData = LEVELS[gameState.level - 1];
+          for (let r = 0; r < levelData.length; r++) {
+            for (let c = 0; c < levelData[r].length; c++) {
+              if (levelData[r][c] === 'P') {
+                player.reset(c * TILE_SIZE, r * TILE_SIZE - 8);
+              }
+            }
+          }
+        }
+      }
+
+
+      // 2. RENDER STAGE
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Save canvas state for camera translations
+      ctx.save();
+      ctx.translate(-camera.x, 0);
+
+      // A. Draw platforms grid / blocks
+      const levelData = LEVELS[gameState.level - 1];
+      for (let r = 0; r < levelData.length; r++) {
+        for (let c = 0; c < levelData[r].length; c++) {
+          if (levelData[r][c] === '#') {
+            const bx = c * TILE_SIZE;
+            const by = r * TILE_SIZE;
+            
+            // Draw sleek dark blue neon border block
+            ctx.fillStyle = '#0a1432';
+            ctx.fillRect(bx, by, TILE_SIZE, TILE_SIZE);
+            
+            // Neon Glow edges
+            ctx.save();
+            ctx.strokeStyle = varColor('base-blue');
+            ctx.shadowColor = varColor('base-blue');
+            ctx.shadowBlur = 4;
+            ctx.lineWidth = 1;
+            ctx.strokeRect(bx + 1, by + 1, TILE_SIZE - 2, TILE_SIZE - 2);
+            
+            // Simple circuit detail line in center
+            ctx.strokeStyle = 'rgba(0, 240, 255, 0.25)';
+            ctx.beginPath();
+            ctx.moveTo(bx + TILE_SIZE/2, by + 2);
+            ctx.lineTo(bx + TILE_SIZE/2, by + TILE_SIZE - 2);
+            ctx.stroke();
+            ctx.restore();
+          }
+        }
+      }
+
+      // B. Draw Goal Portal
+      ctx.save();
+      ctx.shadowColor = varColor('electric-cyan');
+      ctx.shadowBlur = 15;
+      ctx.fillStyle = 'rgba(0, 240, 255, 0.15)';
+      ctx.fillRect(goalBlock.x, goalBlock.y, goalBlock.width, goalBlock.height);
+      ctx.strokeStyle = varColor('electric-cyan');
+      ctx.lineWidth = 3;
+      ctx.strokeRect(goalBlock.x, goalBlock.y, goalBlock.width, goalBlock.height);
+      
+      // Draw grid text inside gate
+      ctx.fillStyle = varColor('electric-cyan');
+      ctx.font = 'bold 9px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText('NODE', goalBlock.x + goalBlock.width/2, goalBlock.y + 20);
+      ctx.fillText('GOAL', goalBlock.x + goalBlock.width/2, goalBlock.y + goalBlock.height - 20);
+      ctx.restore();
+
+      // C. Draw elements
+      coins.forEach(c => c.draw());
+      enemies.forEach(e => e.draw());
+      powerups.forEach(p => p.draw());
+      particles.forEach(p => p.draw(ctx));
+
+      // D. Draw player
+      player.draw();
+
+      ctx.restore();
+
+      animationFrameId = requestAnimationFrame(gameLoop);
+    }
+
+    // Game Control handlers
+    function startGame() {
+      gameState.level = 1;
+      gameState.lives = 3;
+      gameState.coins = 0;
+      gameState.totalScore = 0;
+      gameState.levelScore = 0;
+      
+      buildLevel(gameState.level);
+      showScreen('screen-gameplay');
+      
+      camera.init();
+      
+      // Request initial frame
+      if (animationFrameId) cancelAnimationFrame(animationFrameId);
+      animationFrameId = requestAnimationFrame(gameLoop);
+      showToast(`Entering Node Level ${gameState.level}`, "info");
+    }
+
+    function retryGame() {
+      gameState.lives = 3;
+      gameState.levelScore = 0;
+      
+      buildLevel(gameState.level);
+      showScreen('screen-gameplay');
+      
+      camera.init();
+      
+      if (animationFrameId) cancelAnimationFrame(animationFrameId);
+      animationFrameId = requestAnimationFrame(gameLoop);
+    }
+
+    function nextLevel() {
+      gameState.level++;
+      gameState.levelScore = 0;
+      
+      buildLevel(gameState.level);
+      showScreen('screen-gameplay');
+      
+      camera.init();
+      
+      if (animationFrameId) cancelAnimationFrame(animationFrameId);
+      animationFrameId = requestAnimationFrame(gameLoop);
+      showToast(`Navigated to Node ${gameState.level}`, "info");
+    }
+
+
+    /* ----------------------------------------------------
+       BUTTON INTERACTION & INITIALIZATION
+       ---------------------------------------------------- */
+    // Screen flow controls
+    document.getElementById('btn-connect-wallet').addEventListener('click', () => initWalletConnection(true));
+    document.getElementById('btn-switch-network').addEventListener('click', switchNetwork);
+    document.getElementById('btn-checkin').addEventListener('click', triggerDailyCheckIn);
+    
+    document.getElementById('btn-start-game').addEventListener('click', () => {
+      // Initialize Audio context on user gesture
+      initAudio();
+      startGame();
+    });
+
+    document.getElementById('btn-next-level').addEventListener('click', nextLevel);
+    document.getElementById('btn-retry').addEventListener('click', retryGame);
+    document.getElementById('btn-quit').addEventListener('click', () => {
+      showScreen('screen-onboarding');
+      renderLeaderboard();
+    });
+
+    // Score Submissions on each outcome screen
+    document.getElementById('btn-submit-score').addEventListener('click', () => {
+      submitScoreOnChain(gameState.totalScore);
+    });
+    document.getElementById('btn-submit-score-over').addEventListener('click', () => {
+      submitScoreOnChain(gameState.totalScore);
+    });
+    document.getElementById('btn-submit-score-vic').addEventListener('click', () => {
+      submitScoreOnChain(gameState.totalScore);
+    });
+
+    document.getElementById('btn-victory-home').addEventListener('click', () => {
+      showScreen('screen-onboarding');
+      renderLeaderboard();
+    });
+
+    // On Load initialization
+    window.addEventListener('DOMContentLoaded', () => {
+      // Connect silently if already authorized
+      initWalletConnection(false);
+      
+      // Load and display scoreboard
+      renderLeaderboard();
+    });
+  </script>
+</body>
+</html>
