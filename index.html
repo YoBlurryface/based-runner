@@ -1833,7 +1833,6 @@
         if (checkedInToday) {
           gameState.activeShield = true;
           gameState.shieldTimeout = 300; // ~5 seconds of protection
-          showToast("Daily Check-in Active: Node Shield Online!", "success");
         } else {
           gameState.activeShield = false;
           gameState.shieldTimeout = 0;
@@ -2334,14 +2333,12 @@
         gameState.speedTimeout--;
         if (gameState.speedTimeout <= 0) {
           gameState.activeSpeed = false;
-          showToast("Speed Boost ended", "info");
         }
       }
       if (gameState.activeShield) {
         gameState.shieldTimeout--;
         if (gameState.shieldTimeout <= 0) {
           gameState.activeShield = false;
-          showToast("Invincibility Shield offline", "info");
         }
       }
 
@@ -2375,7 +2372,6 @@
             document.getElementById('score-val').innerText = String(gameState.totalScore).padStart(4, '0');
             playSound('coin');
             spawnExplosion(enemy.x + enemy.width/2, enemy.y + enemy.height/2, varColor('danger'), 12);
-            showToast("Corrupted Node Cleared!", "success");
           } else {
             // Player takes hit
             gameState.lives--;
@@ -2403,7 +2399,9 @@
               showScreen('screen-game-over');
               return;
             } else {
-              showToast(`Hazard detected! ${gameState.lives} lives remaining.`, "error");
+              // Temporary invincibility on damage
+              gameState.activeShield = true;
+              gameState.shieldTimeout = 90; // 1.5s recovery
             }
           }
         }
@@ -2421,11 +2419,9 @@
           if (pup.type === 'speed') {
             gameState.activeSpeed = true;
             gameState.speedTimeout = 240; // 4 seconds
-            showToast("Speed Protocol Activated!", "success");
           } else if (pup.type === 'shield') {
             gameState.activeShield = true;
             gameState.shieldTimeout = 360; // 6 seconds
-            showToast("Invincibility Shield Deployed!", "success");
           }
         }
       }
@@ -2486,7 +2482,6 @@
           return;
         } else {
           // Respawn back at start
-          showToast("Re-indexing runner...", "error");
           const levelData = LEVELS[gameState.level - 1];
           for (let r = 0; r < levelData.length; r++) {
             for (let c = 0; c < levelData[r].length; c++) {
@@ -2585,7 +2580,6 @@
       // Request initial frame
       if (animationFrameId) cancelAnimationFrame(animationFrameId);
       animationFrameId = requestAnimationFrame(gameLoop);
-      showToast(`Entering Node Level ${gameState.level}`, "info");
     }
 
     function retryGame() {
@@ -2612,7 +2606,6 @@
       
       if (animationFrameId) cancelAnimationFrame(animationFrameId);
       animationFrameId = requestAnimationFrame(gameLoop);
-      showToast(`Navigated to Node ${gameState.level}`, "info");
     }
 
 
